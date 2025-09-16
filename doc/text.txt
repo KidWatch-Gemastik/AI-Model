@@ -1,0 +1,26 @@
+1. Buat virtual environment agar dependencies rapi:
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+2. Install package:
+pip install fastapi uvicorn easyocr transformers torch pillow
+[
+    fastapi → buat API endpoint notifikasi
+
+    uvicorn → server FastAPI
+
+    easyocr → OCR
+
+    transformers + torch → NLP model
+
+    pillow → manipulasi gambar (optional)
+]
+
+
+# Running server
+python main.py
+
+# Test pakai curl
+curl -X POST -F "text=Kamu harus pergi dari sini!" http://127.0.0.1:8000/analyze-text/
+curl -X POST -F "file=@notification.png" http://127.0.0.1:8000/analyze-image/
