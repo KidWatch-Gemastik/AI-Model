@@ -1,27 +1,50 @@
 from transformers import pipeline
+import re
 
-# Load pre-trained model (public, no token needed)
 classifier = pipeline(
     "text-classification",
     model="unitary/toxic-bert",
-    return_all_scores=True,
-    framework="pt"   
+    top_k=None,
+    framework="pt"
 )
 
-HARMFUL_KEYWORDS = ["cyber bullying", "pelecehan", "sara", "diskriminasi"]
-
-
-def detect_harmful_content(text: str):
-    flagged_keyword = any(kw.lower() in text.lower() for kw in HARMFUL_KEYWORDS)
+HARMFUL_KEYWORDS = [
+    # Cyber/umum
+    "cyber bullying", "pelecehan", "sara", "diskriminasi", "intimidasi",
+    "narkoba", "drugs", "seksual", "pornografi", "kekerasan", "bully", "racist",
     
+    # Kasar / penghinaan umum
+    "bodoh", "anjing", "kampret", "tai", "brengsek", "monyet", "goblok", "asu",
+    "bajingan", "sampah", "tolol", "idiot", "gila", "brengsek", "bego", "brengsek", "Bangsat",
+    
+    # Menyesatkan / merendahkan
+    "busuk", "hina", "sialan", "cabul", "penipu", "pembohong", "brengsek", "tolol",
+    "goblok", "brengsek", "bodoh amat", "gila kau", "brengsek kamu",
+    
+    # Pelecehan seksual
+    "haram", "mesum", "seks", "porno", "pelacur", "gila seks", "brengsek seks",
+    
+    # Slang tambahan
+    "asu", "anjing banget", "tai babi", "brengsek banget", "bajingan banget", "goblok banget"
+]
+
+
+def detect_harmful_content(text: str) -> dict:
+    # Keyword matching lokal
+    flagged_keyword = any(re.search(rf'\b{re.escape(kw)}\b', text, re.IGNORECASE) for kw in HARMFUL_KEYWORDS)
+    
+    # Analisis model
     nlp_results = classifier(text)
-    
-    # Turunkan threshold agar lebih sensitif
     flagged_model = any(
-        score["score"] > 0.05  # dari 0.5 ke 0.05
+        score["score"] > 0.05
         for score in nlp_results[0]
         if score["label"].lower() in ["toxic", "severe_toxic", "obscene", "insult", "identity_hate"]
     )
     
-    return flagged_keyword or flagged_model, nlp_results
+    flagged = flagged_keyword or flagged_model
 
+    return {
+        "text": text,
+        "flagged": flagged,
+        "analysis": nlp_results
+    }

@@ -1,8 +1,23 @@
 fastapi==0.115.0
 uvicorn==0.30.1
-easyocr==1.7.1
-torch>=2.0.0
 torchvision>=0.15.0
-transformers==4.44.0
-pillow==10.4.0
 huggingface-hub==0.24.6
+
+
+# NLP & Transformers
+transformers==4.44.2
+torch==2.4.0
+sentencepiece==0.2.0
+protobuf==5.27.2
+
+# OCR
+easyocr==1.7.1
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+
+# Firebase
+firebase-admin==6.5.0
+
+# Utils
+python-dotenv==1.0.1
+requests==2.32.3
