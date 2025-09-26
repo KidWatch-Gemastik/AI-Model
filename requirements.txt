@@ -1,14 +1,15 @@
+# FastAPI & Server
 fastapi==0.115.0
 uvicorn==0.30.1
-torchvision>=0.15.0
-huggingface-hub==0.24.6
 
-
-# NLP & Transformers
+# Torch & Transformers
+torch==2.8.0
+torchvision==0.23.0
 transformers==4.44.2
-torch==2.4.0
 sentencepiece==0.2.0
 protobuf==5.27.2
+huggingface-hub==0.24.6
+hf_xet>=0.1.0
 
 # OCR
 easyocr==1.7.1
@@ -18,6 +19,6 @@ Pillow==10.4.0
 # Firebase
 firebase-admin==6.5.0
 
-# Utils
+# Utilities
 python-dotenv==1.0.1
 requests==2.32.3
