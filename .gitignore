@@ -1,3 +1,5 @@
 toxic-detector-v2/**
 kiddygo_model/**
 venv/**
+toxic-detector-6label/model.safetensors
+*.safetensors
