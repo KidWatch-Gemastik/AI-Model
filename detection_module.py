@@ -29,7 +29,6 @@
 # THRESHOLD = 0.05
 # TOXIC_LABELS = ["toxic", "severe_toxic", "obscene", "insult", "identity_hate"]
 
-
 # # ==============================
 # # MODEL INITIALIZATION
 # # ==============================
@@ -37,10 +36,8 @@
 #     """Initialize HuggingFace pipeline."""
 #     return pipeline("text-classification", model=model_name, top_k=None, framework="pt")
 
-
 # classifier_en = get_classifier(MODEL_EN)
 # classifier_id = pipeline("text-classification", model=MODEL_ID, top_k=None, framework="pt")
-
 
 # # ==============================
 # # HELPER FUNCTIONS
@@ -48,14 +45,12 @@
 # def contains_harmful_keyword(text: str, keywords: List[str]) -> bool:
 #     return any(re.search(rf'\b{re.escape(kw)}\b', text, re.IGNORECASE) for kw in keywords)
 
-
 # def model_flags_text(text: str, classifier) -> float:
 #     """Return toxic score from a model."""
 #     results = classifier(text)
 #     scores = results[0] if isinstance(results[0], list) else results
 #     toxic_score = sum(score["score"] for score in scores if score["label"].lower() in TOXIC_LABELS)
 #     return toxic_score
-
 
 # # ==============================
 # # MAIN FUNCTION
@@ -151,16 +146,15 @@
 #     result = detect_harmful_content(test_text)
 #     print(result)
 
-
 # ==============================
 # CONFIGURATION
 # ==============================
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from typing import Dict
 
-MODEL_PATH = "./toxic-detector-6label"
+MODEL_PATH = "./toxic-detector-v2"
 THRESHOLD = 0.05
-TOXIC_LABELS = ["toxic", "severe_toxic", "obscene", "insult", "identity_hate"]
+TOXIC_LABELS = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 
 # Load tokenizer + model manual
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
@@ -169,18 +163,27 @@ model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 # Pipeline dengan tokenizer & model yang sudah benar
 classifier = pipeline("text-classification", model=model, tokenizer=tokenizer, top_k=None, framework="pt")
 
+
 def model_flags_text(text: str) -> float:
     results = classifier(text)
     scores = results[0] if isinstance(results[0], list) else results
     toxic_score = sum(score["score"] for score in scores if score["label"].lower() in TOXIC_LABELS)
     return toxic_score
 
+
 def detect_harmful_content(text: str) -> Dict:
-    score = model_flags_text(text)
-    flagged = score > THRESHOLD
+    results = classifier(text, top_k=None)
+    scores = results[0] if isinstance(results[0], list) else results
+
+    # ambil label dengan skor tertinggi
+    best = max(scores, key=lambda x: x["score"])
+    flagged = best["label"].lower() in TOXIC_LABELS and best["score"] > 0.5
+
     return {
         "text": text,
         "flagged": flagged,
-        "score": score,
+        "predicted_label": best["label"],
+        "score": best["score"],
         "analysis": "Model mendeteksi konten berbahaya" if flagged else "Tidak ada indikasi bahaya"
     }
+
