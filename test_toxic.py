@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 # 1. Load kembali tokenizer & model hasil training
-model_path = "./kiddygo_model"  # folder output_dir waktu training
+model_path = "./kiddygo_model_v2" 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForSequenceClassification.from_pretrained(model_path)
 
@@ -34,9 +34,9 @@ label_map = {
 
 # 4. Contoh test beberapa kalimat
 test_texts = [
-    "Kamu bodoh sekali!",    # abusive
+    "Kamu kotoran binatang",    # abusive
     "Mari kita makan bersama",  # normal
-    "Saya akan menyerang kamu",  # hate speech/toxicity
+    "Saya akan menyerang kamu!",  # hate speech/toxicity
 ]
 
 for t in test_texts:

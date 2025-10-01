@@ -9,30 +9,74 @@ import firebase_admin
 from firebase_admin import messaging, credentials
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
+# ==============================
 # Load ENV
+# ==============================
 load_dotenv()
 
 app = FastAPI(title=os.getenv("APP_NAME", "KiddyGoo AI"))
 
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000", 
-        "https://parent-kiddygoo.vercel.app",  
+        "http://localhost:3000",
+        "https://parent-kiddygoo.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- EMAIL SETUP ---
+# ==============================
+# SECURITY - Bearer Token Middleware
+# ==============================
+API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN")
+
+
+class BearerAuthMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request, call_next):
+        # Bypass docs, openapi, dan preflight CORS
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authorization header missing or invalid"}
+            )
+
+        token = auth_header.split("Bearer ")[1]
+        if token != API_BEARER_TOKEN:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid token"}
+            )
+
+        return await call_next(request)
+
+
+# Tambahkan ke app
+app.add_middleware(BearerAuthMiddleware)
+
+# ==============================
+# EMAIL SETUP
+# ==============================
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
 SMTP_EMAIL = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
-# --- FIREBASE SETUP ---
+# ==============================
+# FIREBASE SETUP
+# ==============================
 FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS")
 cred = credentials.Certificate(FIREBASE_CREDENTIALS)
 firebase_admin.initialize_app(cred)
@@ -41,7 +85,9 @@ firebase_admin.initialize_app(cred)
 DEVICE_TOKENS = set()
 
 
-# Email alert
+# ==============================
+# UTIL FUNCTIONS
+# ==============================
 def send_email_alert(parent_email, message):
     try:
         msg = MIMEText(message)
@@ -56,7 +102,6 @@ def send_email_alert(parent_email, message):
         print("Email gagal dikirim:", e)
 
 
-# Push notification
 def send_push_notification(token, message_text):
     try:
         message = messaging.Message(
@@ -73,20 +118,29 @@ def send_push_notification(token, message_text):
         return None
 
 
-# Model untuk input teks
+# ==============================
+# MODELS
+# ==============================
 class TextInput(BaseModel):
     text: str
     parent_email: str | None = None
     parent_token: str | None = None
 
-# --- API ENDPOINTS ---
 
-
-# 1️⃣ Simpan device token
 class TokenInput(BaseModel):
     token: str
 
 
+class NotificationInput(BaseModel):
+    title: str
+    body: str
+
+# ==============================
+# API ENDPOINTS
+# ==============================
+
+
+# Simpan device token
 @app.post("/api/register-token")
 async def register_token(data: TokenInput):
     DEVICE_TOKENS.add(data.token)
@@ -94,12 +148,7 @@ async def register_token(data: TokenInput):
     return {"success": True, "total_tokens": len(DEVICE_TOKENS)}
 
 
-# 2️⃣ Kirim notifikasi ke semua token
-class NotificationInput(BaseModel):
-    title: str
-    body: str
-
-
+# Kirim notifikasi ke semua token
 @app.post("/api/send-notification")
 async def send_notification(data: NotificationInput):
     responses = []
@@ -109,7 +158,7 @@ async def send_notification(data: NotificationInput):
     return {"success": True, "sent": len(responses), "responses": responses}
 
 
-# 3️⃣ Analyze text
+# Analyze text
 @app.post("/analyze-text/")
 async def analyze_text(input_data: TextInput):
     result = detect_harmful_content(input_data.text)
@@ -124,9 +173,13 @@ async def analyze_text(input_data: TextInput):
     return result
 
 
-# 4️⃣ Analyze image
+# Analyze image
 @app.post("/analyze-image/")
-async def analyze_image(file: UploadFile=File(...), parent_email: str=Form(None), parent_token: str=Form(None)):
+async def analyze_image(
+    file: UploadFile=File(...),
+    parent_email: str=Form(None),
+    parent_token: str=Form(None),
+):
     text = extract_text_from_image(file.file)
     result = detect_harmful_content(text)
 

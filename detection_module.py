@@ -152,38 +152,68 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from typing import Dict
 
-MODEL_PATH = "./toxic-detector-v2"
-THRESHOLD = 0.05
-TOXIC_LABELS = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
+# Path model kamu
+MODEL_PATH = "./kiddygo_model_v2"
 
-# Load tokenizer + model manual
+# Mapping label index → nama label
+LABELS = {
+    0: "normal",
+    1: "hate_toxic",
+    2: "abusive_insult"
+}
+
+# Load tokenizer + model
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 
-# Pipeline dengan tokenizer & model yang sudah benar
-classifier = pipeline("text-classification", model=model, tokenizer=tokenizer, top_k=None, framework="pt")
+# Pipeline dengan return_all_scores=True supaya kita dapat semua probabilitas label
+classifier = pipeline(
+    "text-classification",
+    model=model,
+    tokenizer=tokenizer,
+    top_k=None,   # penting
+    framework="pt"
+)
 
 
-def model_flags_text(text: str) -> float:
-    results = classifier(text)
-    scores = results[0] if isinstance(results[0], list) else results
-    toxic_score = sum(score["score"] for score in scores if score["label"].lower() in TOXIC_LABELS)
-    return toxic_score
+def classify_text(text: str) -> Dict:
+    """
+    Mengklasifikasikan satu teks menjadi salah satu label [normal, hate_toxic, abusive_insult]
+    dan mengembalikan skor semua label.
+    """
+    results = classifier(text)[0]  # list of dict [{'label': 'LABEL_0', 'score': ...}, ...]
+    
+    # Konversi label 'LABEL_0' ke nama label kamu
+    scores = []
+    for r in results:
+        idx = int(r["label"].replace("LABEL_", ""))  # ambil index label
+        scores.append({
+            "label": LABELS[idx],
+            "score": float(r["score"])
+        })
 
-
-def detect_harmful_content(text: str) -> Dict:
-    results = classifier(text, top_k=None)
-    scores = results[0] if isinstance(results[0], list) else results
-
-    # ambil label dengan skor tertinggi
+    # Ambil label dengan score tertinggi
     best = max(scores, key=lambda x: x["score"])
-    flagged = best["label"].lower() in TOXIC_LABELS and best["score"] > 0.5
 
     return {
         "text": text,
-        "flagged": flagged,
         "predicted_label": best["label"],
         "score": best["score"],
-        "analysis": "Model mendeteksi konten berbahaya" if flagged else "Tidak ada indikasi bahaya"
+        "all_scores": scores
     }
 
+
+def detect_harmful_content(text: str, threshold: float = 0.5) -> Dict:
+    """
+    Mengecek apakah teks termasuk kategori harmful (hate_toxic atau abusive_insult)
+    dengan threshold probabilitas tertentu.
+    """
+    result = classify_text(text)
+    harmful = (
+        result["predicted_label"] in ["hate_toxic", "abusive_insult"]
+        and result["score"] >= threshold
+    )
+
+    result["flagged"] = harmful
+    result["analysis"] = "Konten berbahaya terdeteksi" if harmful else "Konten normal / aman"
+    return result

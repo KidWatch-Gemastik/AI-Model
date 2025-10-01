@@ -5,3 +5,4 @@ toxic-detector-6label/model.safetensors
 *.safetensorstoxic-detector-6label/model.safetensors
 kiddy-go-firebase-adminsdk-fbsvc-d565c49fc2.json
 .env
+kiddygo_model_v2/**
