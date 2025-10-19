@@ -33,6 +33,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    """
+    Handle all OPTIONS requests (for CORS preflight)
+    """
+    return JSONResponse(content={"message": "OK"}, status_code=200)
+
 # ==============================
 # SECURITY - Bearer Token Middleware
 # ==============================
