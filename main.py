@@ -64,7 +64,6 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# Tambahkan ke app
 app.add_middleware(BearerAuthMiddleware)
 
 # ==============================
@@ -174,11 +173,9 @@ async def analyze_text(input_data: TextInput):
             f"Detail Analisis: {result['analysis']}"
         )
 
-        # Kirim email jika parent_email tersedia
         if input_data.parent_email:
             send_email_alert(input_data.parent_email, alert_msg)
         
-        # Kirim push notification jika parent_token tersedia
         if input_data.parent_token:
             send_push_notification(input_data.parent_token, alert_msg)
 
