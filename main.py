@@ -1,4 +1,5 @@
 import os
+import math
 from fastapi import FastAPI, UploadFile, File, Form
 from detection_module import detect_harmful_content
 from ocr_module import extract_text_from_image
@@ -25,7 +26,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://parent-kiddygoo.vercel.app",
-        "https://kiddygoo.my.id/",
+        "https://kiddygoo.my.id",
     ],
     allow_credentials=True,
     allow_methods=["*"],
