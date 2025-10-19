@@ -25,6 +25,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://parent-kiddygoo.vercel.app",
+        "https://kiddygoo.my.id/",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -144,7 +145,7 @@ class NotificationInput(BaseModel):
 @app.post("/api/register-token")
 async def register_token(data: TokenInput):
     DEVICE_TOKENS.add(data.token)
-    print("✅ Token terdaftar:", data.token)
+    print("Token terdaftar:", data.token)
     return {"success": True, "total_tokens": len(DEVICE_TOKENS)}
 
 
@@ -164,13 +165,28 @@ async def analyze_text(input_data: TextInput):
     result = detect_harmful_content(input_data.text)
 
     if result["flagged"]:
-        alert_msg = f"Pesan mencurigakan:\n{result['text']}\n\nDetail: {result['analysis']}"
+        confidence_percent = math.ceil(result["confidence"] * 100) 
+        alert_msg = (
+            f"⚠️ Pesan mencurigakan terdeteksi!\n\n"
+            f"Pesan: {result['text']}\n"
+            f"Label: {result['label']}\n"
+            f"Confidence: {confidence_percent}%\n\n"
+            f"Detail Analisis: {result['analysis']}"
+        )
+
+        # Kirim email jika parent_email tersedia
         if input_data.parent_email:
             send_email_alert(input_data.parent_email, alert_msg)
+        
+        # Kirim push notification jika parent_token tersedia
         if input_data.parent_token:
             send_push_notification(input_data.parent_token, alert_msg)
 
-    return result
+    return {
+        "flagged": result["flagged"],
+        "label": result.get("label"),
+        "confidence": f"{math.ceil(result['confidence']*100)}%"
+    }
 
 
 # Analyze image
